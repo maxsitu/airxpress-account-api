@@ -1,8 +1,8 @@
 package validator
 
-import java.text.{SimpleDateFormat}
+import java.text.SimpleDateFormat
 
-import model.Role
+import model.SecurityRole
 
 import scala.util.Try
 
@@ -30,9 +30,14 @@ object UserRegisterValidator {
   def validatePassword(password: String) =
     if (password.nonEmpty) UserRegisterValidator.ValidationOk else Left("password cannot be empty")
 
-  def validateRole(role: String) =
-    Role.parseRole(role).fold(  _ ⇒ Left("invalid role"), _ ⇒ UserRegisterValidator.ValidationOk)
-
   def validateDateOfBirth(dob: String) =
     Try(DOBFormat.parse(dob)).fold(_ ⇒ Left("invalid date of birth"), _ ⇒ UserRegisterValidator.ValidationOk)
+
+  def validateUserRoles(roles: Set[String]): Either[String, String] =
+    roles.map(role ⇒ SecurityRole.parseRole(role)).foldLeft[Either[Unit, String]](Right(""))(
+      (result, role) ⇒ result.flatMap(r ⇒ role)
+    ) match {
+      case Left(()) ⇒ Left("invalid role")
+      case r @ Right(str) ⇒ r.asInstanceOf[Either[String, String]]
+    }
 }

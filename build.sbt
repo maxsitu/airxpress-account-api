@@ -11,7 +11,8 @@ libraryDependencies += guice
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 libraryDependencies ++= Seq(
   "org.reactivemongo" %% "reactivemongo" % "0.13.0",
-  "com.github.t3hnar" %% "scala-bcrypt" % "3.1"
+  "com.github.t3hnar" %% "scala-bcrypt" % "3.1",
+  "be.objectify" %% "deadbolt-scala" % "2.6.0",
 )
 // Adds additional packages into Twirl
 //TwirlKeys.templateImports += "com.maxsitu.controllers._"
