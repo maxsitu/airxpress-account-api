@@ -13,9 +13,9 @@ class UserRoleDeadboltHandler () extends DeadboltHandler {
   override def beforeAuthCheck[A](request: Request[A]): Future[Option[Result]] = Future(None)
 
   override def getSubject[A](request: AuthenticatedRequest[A]): Future[Option[Subject]] = {
-    request.cookies.get("PLAY_ACCOUNT_SERVICE_USER_ID") match {
+    request.session.get("username") match {
       case None ⇒ Future(None)
-      case Some(userId) ⇒ UserDao.findUserByUsername(userId.value)
+      case Some(userId) ⇒ UserDao.findUserByUsername(userId)
     }
   }
 

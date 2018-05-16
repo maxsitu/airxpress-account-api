@@ -8,7 +8,7 @@ import javax.inject.{Inject, Singleton}
 import model._
 import play.api.libs.concurrent.ExecutionContextProvider
 import play.api.libs.json.{JsError, JsValue, Json, Reads}
-import play.api.mvc.{AbstractController, ControllerComponents, Cookie, Request}
+import play.api.mvc.{AbstractController, ControllerComponents, Request}
 import reactivemongo.core.errors.ReactiveMongoException
 import validator.UserRegisterValidator
 import views.html.accessOk
@@ -16,7 +16,11 @@ import views.html.accessOk
 import scala.concurrent.Future
 
 @Singleton
-class UserController @Inject()(cc: ControllerComponents, ecProvider: ExecutionContextProvider, deadbolt: DeadboltActions, actionBuilder: ActionBuilders) extends AbstractController(cc) {
+class UserController @Inject()(
+  cc: ControllerComponents,
+  ecProvider: ExecutionContextProvider,
+  deadbolt: DeadboltActions,
+  actionBuilder: ActionBuilders) extends AbstractController(cc) {
 
   implicit val ec = ecProvider.get()
   implicit val userReads: Reads[RegisterUser] = Json.reads[RegisterUser]
@@ -80,7 +84,7 @@ class UserController @Inject()(cc: ControllerComponents, ecProvider: ExecutionCo
         UserDao.findUserByUsername(username).map {
 
           case Some(u:User) if (password.isBcrypted(u.password)) ⇒
-            Ok(u.userRoles.mkString(",")).withCookies(Cookie("PLAY_ACCOUNT_SERVICE_USER_ID", u.username))
+            Ok(u.userRoles.mkString(",")).withSession("username" → u.username)
           case _ ⇒
             BadRequest("invalid username/password")
         }
