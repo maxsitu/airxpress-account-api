@@ -1,37 +1,28 @@
 package dao
 
-import java.time.{Instant, OffsetDateTime, ZoneOffset}
 import java.time.format.DateTimeFormatter
-import java.util.TimeZone
+import java.time.{Instant, OffsetDateTime, ZoneOffset}
 
-import model.{BasicUser, User}
-import org.joda.time.DateTimeZone
-import play.api.libs.json.{Reads, Writes}
-import reactivemongo.api.{Cursor, DefaultDB, MongoConnection, MongoDriver}
+import javax.inject.{Inject, Singleton}
+import model.User
+import play.api.libs.concurrent.ExecutionContextProvider
+import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocumentReader, BSONDocumentWriter, BSONHandler, BSONString, Macros, document}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object UserDao {
+@Singleton
+class UserDao @Inject() (mongoDb : MongoDB, ecProvider: ExecutionContextProvider) {
+
   implicit val dateTimeHandler = new BSONHandler[BSONString, OffsetDateTime] {
     override def read(bson: BSONString): OffsetDateTime = OffsetDateTime.ofInstant(Instant.from(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(bson.value)), ZoneOffset.UTC)
     override def write(t: OffsetDateTime): BSONString = BSONString(t.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneOffset.UTC)))
   }
 
-  val mongoUri = "mongodb://localhost:27017/ax_account_db?authMode=scram-sha1"
+  implicit val ec: ExecutionContext = ecProvider.get()
 
-  import ExecutionContext.Implicits.global // use any appropriate context
-
-  // Connect to the database: Must be done only once per application
-  val driver = MongoDriver()
-  val parsedUri = MongoConnection.parseURI(mongoUri)
-  val connection = parsedUri.map(driver.connection(_))
-
-  // Database and collections: Get references
-  val futureConnection = Future.fromTry(connection)
-  def db1: Future[DefaultDB] = futureConnection.flatMap(_.database("ax_account_db"))
-  def userCollection: Future[BSONCollection] = db1.map(_.collection("user"))
+  def userCollection: Future[BSONCollection] = mongoDb.axAccountDb.map(_.collection("user"))
 
   // Write Documents: insert or update
 

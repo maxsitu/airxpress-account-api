@@ -3,6 +3,7 @@ package controllers
 import java.time.{Instant, ZoneOffset}
 
 import be.objectify.deadbolt.scala.{ActionBuilders, DeadboltActions}
+import constant.SessionKeys
 import dao.UserDao
 import javax.inject.{Inject, Singleton}
 import model._
@@ -20,7 +21,8 @@ class UserController @Inject()(
   cc: ControllerComponents,
   ecProvider: ExecutionContextProvider,
   deadbolt: DeadboltActions,
-  actionBuilder: ActionBuilders) extends AbstractController(cc) {
+  actionBuilder: ActionBuilders,
+  userDao: UserDao) extends AbstractController(cc) {
 
   implicit val ec = ecProvider.get()
   implicit val userReads: Reads[RegisterUser] = Json.reads[RegisterUser]
@@ -32,7 +34,7 @@ class UserController @Inject()(
   def createUser = Action.async(validateJson[RegisterUser]) { request: Request[RegisterUser] ⇒
     val regUser: RegisterUser = request.body
 
-    UserDao.findUserByUsername(regUser.username).flatMap {
+    userDao.findUserByUsername(regUser.username).flatMap {
       case None ⇒
         val currTime = Instant.now().atOffset(ZoneOffset.UTC)
         val user = for {
@@ -58,7 +60,7 @@ class UserController @Inject()(
 
               { hashedPassword ⇒
                 val newUser = u.copy(password = hashedPassword)
-                UserDao.createUser(newUser).map(_ ⇒ Ok("success"))
+                userDao.createUser(newUser).map(_ ⇒ Ok("success"))
               }
             )
           }
@@ -81,10 +83,10 @@ class UserController @Inject()(
     userPasswordOpt match {
       case (Some(username), Some(password)) ⇒
         import com.github.t3hnar.bcrypt._
-        UserDao.findUserByUsername(username).map {
+        userDao.findUserByUsername(username).map {
 
           case Some(u:User) if (password.isBcrypted(u.password)) ⇒
-            Ok(u.userRoles.mkString(",")).withSession("username" → u.username)
+            Ok(u.userRoles.mkString(",")).withSession(SessionKeys.USERNAME → u.username)
           case _ ⇒
             BadRequest("invalid username/password")
         }
