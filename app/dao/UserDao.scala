@@ -5,7 +5,6 @@ import java.time.{Instant, OffsetDateTime, ZoneOffset}
 
 import javax.inject.{Inject, Singleton}
 import model.User
-import play.api.libs.concurrent.ExecutionContextProvider
 import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocumentReader, BSONDocumentWriter, BSONHandler, BSONString, Macros, document}
@@ -13,14 +12,13 @@ import reactivemongo.bson.{BSONDocumentReader, BSONDocumentWriter, BSONHandler, 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class UserDao @Inject() (mongoDb : MongoDB, ecProvider: ExecutionContextProvider) {
+class UserDao @Inject() (mongoDb : MongoDB)
+                        (implicit ec: ExecutionContext){
 
   implicit val dateTimeHandler = new BSONHandler[BSONString, OffsetDateTime] {
     override def read(bson: BSONString): OffsetDateTime = OffsetDateTime.ofInstant(Instant.from(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(bson.value)), ZoneOffset.UTC)
     override def write(t: OffsetDateTime): BSONString = BSONString(t.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneOffset.UTC)))
   }
-
-  implicit val ec: ExecutionContext = ecProvider.get()
 
   def userCollection: Future[BSONCollection] = mongoDb.axAccountDb.map(_.collection("user"))
 
