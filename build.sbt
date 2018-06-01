@@ -3,7 +3,11 @@ organization := "com.maxsitu"
 
 version := "1.0-SNAPSHOT"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
+lazy val root = (project in file(".")).enablePlugins(PlayScala).settings(
+  watchSources ++= (baseDirectory.value / "public/ui" ** "*").get
+)
+
+resolvers += Resolver.typesafeRepo("releases")
 
 scalaVersion := "2.12.4"
 
@@ -22,4 +26,3 @@ libraryDependencies ++= Seq(
 
 // Adds additional packages into conf/routes
 // play.sbt.routes.RoutesKeys.routesImport += "com.maxsitu.binders._"
-resolvers += Resolver.typesafeRepo("releases")
