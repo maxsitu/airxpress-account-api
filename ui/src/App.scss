@@ -1,0 +1,21 @@
+.App {
+  &-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+
+  .trigger {
+    &:hover {
+      color: #1890ff;
+    }
+    font-size: 18px;
+    line-height: 64px;
+    padding: 0 24px;
+    cursor: pointer;
+    transition: color .3s;
+  }
+}
+
+@keyframes App-logo-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
