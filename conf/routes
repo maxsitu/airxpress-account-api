@@ -8,10 +8,11 @@ GET     /                           controllers.FrontendController.appSummary
 GET     /api/summary                controllers.FrontendController.appSummary
 
 POST    /user                       controllers.UserController.createUser
-POST    /login                      controllers.UserController.loginUser
 GET     /restrictOne                controllers.UserController.restrictOne
 
-GET     /ws                         controllers.WsController.ws
+
+
+
 
 
 # Map static resources from the /public folder to the /assets URL path

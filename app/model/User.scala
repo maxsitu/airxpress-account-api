@@ -2,20 +2,38 @@ package model
 
 import java.time.OffsetDateTime
 
-import be.objectify.deadbolt.scala.models.{Permission, Subject}
+import be.objectify.deadbolt.scala.models.Subject
+import model.UserRole.UserRoleValue
+import play.api.libs.json.{Json, Reads}
 
-case class RegisterUser(username: String, firstName: String, lastName: String, dateOfBirth: String, userRoles: Set[String], password: String, email: String)
-case class BasicUser(username:String, firstName: String, lastName: String, dateOfBirth: String, userRoles: Set[String])
-
-case class User(username:String, firstName: String, lastName: String, dateOfBirth: String,
-  userRoles: Set[String], password: String, updatedOn: OffsetDateTime, createdOn: OffsetDateTime) extends Subject {
+case class RegisterUser(
+                         username: String, firstName: String, lastName: String, dateOfBirth: String,
+                         userRoles: List[UserRoleValue], userPermissions: List[UserPermission], password: String,
+                         email: String
+                       )
+object RegisterUser {
+  implicit val RegisterUserReads: Reads[RegisterUser] = Json.reads[RegisterUser]
+}
+case class BasicUser(
+                      username:String, firstName: String, lastName: String, dateOfBirth: String, userRoles: List[UserRoleValue],
+                      userPermissions: List[UserPermission]
+                    )
+case class User(
+                 username:String, firstName: String, lastName: String, dateOfBirth: String, userRoles: List[UserRoleValue],
+                 userPermissions: List[UserPermission], password: String, updatedOn: OffsetDateTime,
+                 createdOn: OffsetDateTime
+               ) extends Subject {
 
   override def identifier: String = username
-  override def roles: List[SecurityRole] = userRoles.toList.map(SecurityRole(_))
-  override def permissions: List[Permission] = List(UserPermission("user.edit"))
+  override def roles: List[UserRoleValue] = userRoles
+  override def permissions: List[UserPermission] = List(UserPermission("user.edit"))
+
+
 }
 
 object User {
+  import UserPermission._
+  import UserRole._
   import play.api.libs.json._
 
   implicit object UserWrites extends OWrites[User] {
@@ -24,7 +42,8 @@ object User {
       "firstName" → u.firstName,
       "lastName"  → u.lastName,
       "dateOfBirth" → u.dateOfBirth,
-      "roles"  → u.userRoles,
+      "roles"     → u.userRoles,
+      "permissions" → u.userPermissions,
       "password"  → u.password,
       "updatedOn" → u.updatedOn,
       "createdOn" → u.createdOn

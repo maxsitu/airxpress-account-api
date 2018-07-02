@@ -4,7 +4,8 @@ organization := "com.maxsitu"
 version := "1.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala).settings(
-  watchSources ++= (baseDirectory.value / "ui" ** "*").get
+  watchSources ++= (baseDirectory.value / "ui" ** "*").get,
+  resolvers += Resolver.url("typesafe", url("http://repo.typesafe.com/typesafe/ivy-releases/"))(Resolver.ivyStylePatterns)
 )
 
 resolvers += Resolver.typesafeRepo("releases")
@@ -12,6 +13,8 @@ resolvers += Resolver.typesafeRepo("releases")
 scalaVersion := "2.12.4"
 
 libraryDependencies += guice
+libraryDependencies += ws
+libraryDependencies += ehcache
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 libraryDependencies ++= Seq(
   "org.reactivemongo" %% "reactivemongo"  % "0.13.0",

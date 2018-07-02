@@ -6,10 +6,14 @@ import be.objectify.deadbolt.scala.{ActionBuilders, DeadboltActions}
 import constant.SessionKeys
 import dao.UserDao
 import javax.inject.{Inject, Singleton}
+import model.RegisterUser._
+import model.User._
+import model.UserRole._
 import model._
 import play.api.libs.json.{JsError, JsValue, Json, Reads}
-import play.api.mvc.{AbstractController, ControllerComponents, Request}
+import play.api.mvc._
 import reactivemongo.core.errors.ReactiveMongoException
+import security.SessionUtil
 import validator.UserRegisterValidator
 import views.html.accessOk
 
@@ -21,9 +25,10 @@ class UserController @Inject()(
   cc: ControllerComponents,
   deadbolt: DeadboltActions,
   actionBuilder: ActionBuilders,
-  userDao: UserDao) extends AbstractController(cc) {
+  userDao: UserDao,
+  sessionUtil: SessionUtil) extends AbstractController(cc) {
 
-  implicit val userReads: Reads[RegisterUser] = Json.reads[RegisterUser]
+  val logger = play.api.Logger(getClass)
 
   def validateJson[A : Reads] = parse.json.validate(
     _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
@@ -31,31 +36,30 @@ class UserController @Inject()(
 
   def createUser = Action.async(validateJson[RegisterUser]) { request: Request[RegisterUser] ⇒
     val regUser: RegisterUser = request.body
-
     userDao.findUserByUsername(regUser.username).flatMap {
       case None ⇒
         val currTime = Instant.now().atOffset(ZoneOffset.UTC)
         val user = for {
-          roles ← UserRegisterValidator.validateUserRoles(regUser.userRoles).right
-          username ← UserRegisterValidator.validateUsername(regUser.username).right
-          dob ← UserRegisterValidator.validateDateOfBirth(regUser.dateOfBirth).right
-          email ← UserRegisterValidator.validateEmail(regUser.email).right
-          psswd ← UserRegisterValidator.validatePassword(regUser.password).right
+          roles     ← UserRegisterValidator.validateUserRoles(regUser.userRoles).right
+          username  ← UserRegisterValidator.validateUsername(regUser.username).right
+          dob       ← UserRegisterValidator.validateDateOfBirth(regUser.dateOfBirth).right
+          email     ← UserRegisterValidator.validateEmail(regUser.email).right
+          psswd     ← UserRegisterValidator.validatePassword(regUser.password).right
         } yield
-
-          User(regUser.username, regUser.firstName, regUser.lastName, regUser.dateOfBirth,
-            regUser.userRoles.map(SecurityRole.parseRole(_).getOrElse(SecurityRole.NORMAL)), "psswd",
-            currTime, currTime)
+          User(
+            regUser.username, regUser.firstName, regUser.lastName, regUser.dateOfBirth, regUser.userRoles,
+            regUser.userPermissions, "tempPsswd", currTime, currTime
+          )
 
         user.fold(
+          // user validation failed in last step
           s ⇒ Future.successful(BadRequest(s)),
+          // valid user
           { u ⇒
             import com.github.t3hnar.bcrypt._
-            val hashedPasswordTry = regUser.password.bcryptSafe(10)
-
-            hashedPasswordTry.fold(
+            regUser.password.bcryptSafe(10).fold(
+              // failed in generating password hash
               e ⇒ Future.successful(BadRequest(e.getMessage)),
-
               { hashedPassword ⇒
                 val newUser = u.copy(password = hashedPassword)
                 userDao.createUser(newUser).map(_ ⇒ Ok("success"))
@@ -65,7 +69,7 @@ class UserController @Inject()(
         )
 
       case Some(u: User) ⇒
-        Future.successful(BadRequest("username exists already"))
+        Future.successful(Conflict("username exists already"))
 
     } recover {
       case e: ReactiveMongoException ⇒
@@ -73,7 +77,12 @@ class UserController @Inject()(
     }
   }
 
-  def loginUser = Action.async(parse.json) { request: Request[JsValue] ⇒
+  /**
+    * Validate username/password. Update session with username and login time.
+    * It takes username/password as request body
+    * @return Action instance returns Future[Result]
+    */
+  def validateUser = Action.async(parse.json) { request: Request[JsValue] ⇒
     val userPasswordOpt = (
       (request.body \ "username").asOpt[String],
       (request.body \ "password").asOpt[String])
@@ -84,16 +93,42 @@ class UserController @Inject()(
         userDao.findUserByUsername(username).map {
 
           case Some(u:User) if (password.isBcrypted(u.password)) ⇒
-            Ok(u.userRoles.mkString(",")).withSession(SessionKeys.USERNAME → u.username)
+            Ok(u.userRoles.mkString(","))
+              .withSession(
+                SessionKeys.USERNAME → u.username,
+                SessionKeys.LOGIN_TIMESTAMP → Instant.now().toEpochMilli.toString
+              )
           case _ ⇒
-            BadRequest("invalid username/password")
+            Unauthorized("invalid username/password")
         }
       case _ ⇒
-        Future.successful(BadRequest("username/password missing"))
+        Future.successful(
+          BadRequest("username/password missing")
+        )
     }
   }
 
-  def restrictOne = deadbolt.Restrict(List(Array("ACT_MGR")))() { authRequest =>
+  def userInfo = Action.async(parse.empty) { request: Request[Unit] ⇒
+    if (sessionUtil.validateLoginTimestamp(request.session))
+      sessionUtil.extractUser(request.session).map {
+        case Right(user) ⇒ Some(user)
+        case Left(_)     ⇒ None
+      }.map {
+        case Some(user) ⇒ Ok(Json.toJson(user))
+        case None       ⇒ Unauthorized("username in session not found")
+      }
+    else
+      Future.successful(Unauthorized("not logged in or login age expired"))
+  }
+
+  def user(username: String) = deadbolt.Restrict(List(Array(AcctMgr.name)))() { authRequest ⇒
+    userDao.findUserByUsername(username).map (userOpt ⇒
+      if (userOpt.isDefined) Ok(Json.toJson(userOpt.get))
+      else NotFound(s"username ${username} not found")
+    )
+  }
+
+  def restrictOne = deadbolt.Restrict(List(Array(AcctMgr.name)))() { authRequest =>
     Future {
       Ok(accessOk())
     }

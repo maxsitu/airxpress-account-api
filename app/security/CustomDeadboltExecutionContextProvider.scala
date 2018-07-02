@@ -1,6 +1,8 @@
 package security
 
+import akka.actor.ActorSystem
 import be.objectify.deadbolt.scala.DeadboltExecutionContextProvider
+import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext
 
@@ -9,6 +11,10 @@ import scala.concurrent.ExecutionContext
  *
  * @author Steve Chaloner (steve@objectify.be)
  */
-class CustomDeadboltExecutionContextProvider extends DeadboltExecutionContextProvider {
-  override def get(): ExecutionContext = scala.concurrent.ExecutionContext.global
+class CustomDeadboltExecutionContextProvider @Inject() (actorSystem: ActorSystem)
+  extends DeadboltExecutionContextProvider {
+
+  val deadboltExecutionContext = actorSystem.dispatchers.lookup("deadbolt-context")
+
+  override def get(): ExecutionContext = deadboltExecutionContext
 }

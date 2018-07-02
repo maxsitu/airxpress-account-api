@@ -8,4 +8,5 @@ target
 /.g8
 /.gradle
 /*.iml
+/.vscode
 /RUNNING_PID
