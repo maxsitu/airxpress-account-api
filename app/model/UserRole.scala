@@ -1,19 +1,20 @@
 package model
-import be.objectify.deadbolt.scala.models.Role
-import play.api.libs.json._
+
+
 
 object UserRole extends Enumeration {
-  case class UserRoleValue(name: String) extends Val with Role
+  import be.objectify.deadbolt.scala.models.Role
+  import play.api.libs.json._
 
-  implicit def valueToUserRoleValue(x: Value): UserRoleValue = x.asInstanceOf[UserRoleValue]
+  case class UserRoleValue(name: String) extends Val(name) with Role
 
-  val Void    = Value("Void")
-  val Normal  = Value("Normal")
-  val Admin   = Value("Admin")
-  val AcctMgr = Value("AcctMgr")
+  val Void    = UserRoleValue("Void")
+  val Normal  = UserRoleValue("Normal")
+  val Admin   = UserRoleValue("Admin")
+  val AcctMgr = UserRoleValue("AcctMgr")
 
-  def parse(s: String): Either[Unit, UserRoleValue] = UserRole.values.find(_.name == s) match {
-    case Some(value)  ⇒ Right(value)
+  def parse(s: String): Either[Unit, UserRoleValue] = UserRole.values.find(_.asInstanceOf[UserRoleValue].name == s) match {
+    case Some(value)  ⇒ Right(value.asInstanceOf[UserRoleValue])
     case None         ⇒ Left(())
   }
 

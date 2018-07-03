@@ -1,9 +1,9 @@
 import javax.inject.{Inject, Provider, Singleton}
-import play.api.{Configuration, Environment, OptionalSourceMapper, UsefulException}
-import play.api.http.{DefaultHttpErrorHandler, HttpErrorHandler}
+import play.api.http.DefaultHttpErrorHandler
 import play.api.mvc.RequestHeader
 import play.api.mvc.Results._
 import play.api.routing.Router
+import play.api.{Configuration, Environment, OptionalSourceMapper, UsefulException}
 
 import scala.concurrent.Future
 
@@ -23,7 +23,7 @@ class ErrorHandler @Inject() (
 
   override def onForbidden(request: RequestHeader, message: String) = {
     Future.successful(
-      Forbidden("You're not allowed to access this resource.")
+      Forbidden(s"You're not allowed to access this resource. $message")
     )
   }
 

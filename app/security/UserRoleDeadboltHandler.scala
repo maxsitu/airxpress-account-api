@@ -18,12 +18,10 @@ class UserRoleDeadboltHandler @Inject() (
   override def beforeAuthCheck[A](request: Request[A]): Future[Option[Result]] = Future(None)
 
   override def getSubject[A](request: AuthenticatedRequest[A]): Future[Option[Subject]] = {
-    if (sessionUtil.validateLoginTimestamp(request.session))
-      sessionUtil.extractUser(request.session).map {
-        case Right(value) ⇒ Some(value)
-        case Left(_) ⇒ None
-      }
-    else Future.successful(None)
+    sessionUtil.extractUser(request.session).map {
+      case Right(value) ⇒ Some(value)
+      case Left(_) ⇒ None
+    }
   }
 
   override def onAuthFailure[A](request: AuthenticatedRequest[A]): Future[Result] = {

@@ -7,7 +7,13 @@
 GET     /                           controllers.FrontendController.appSummary
 GET     /api/summary                controllers.FrontendController.appSummary
 
++ nocsrf
 POST    /user                       controllers.UserController.createUser
++ nocsrf
+POST    /login                      controllers.UserController.validateUser
+
+GET     /userInfo                   controllers.UserController.userInfo
+GET     /userInfo/:username         controllers.UserController.user(username: String)
 GET     /restrictOne                controllers.UserController.restrictOne
 
 

@@ -1,11 +1,12 @@
 package model
 
 import be.objectify.deadbolt.scala.models.Permission
-import play.api.libs.json._
 
 case class UserPermission(value: String) extends Permission
 
 object UserPermission {
+  import play.api.libs.json._
+
   implicit object UserPermissionWrites extends Writes[UserPermission] {
     override def writes(o: UserPermission): JsValue = JsString(o.value)
   }

@@ -6,8 +6,6 @@ import be.objectify.deadbolt.scala.{ActionBuilders, DeadboltActions}
 import constant.SessionKeys
 import dao.UserDao
 import javax.inject.{Inject, Singleton}
-import model.RegisterUser._
-import model.User._
 import model.UserRole._
 import model._
 import play.api.libs.json.{JsError, JsValue, Json, Reads}
@@ -29,6 +27,14 @@ class UserController @Inject()(
   sessionUtil: SessionUtil) extends AbstractController(cc) {
 
   val logger = play.api.Logger(getClass)
+
+  implicit val userPermissionReads = UserPermission.UserPermissionReads
+  implicit val userRoleValueReads = UserRole.UserRoleValueReads
+  implicit val registerUserReads = RegisterUser.RegisterUserReads
+
+  implicit val userPermissionWrites = UserPermission.UserPermissionWrites
+  implicit val userRoleValueWrites = UserRole.UserRoleValueWrites
+  implicit val userWrites = User.UserWrites
 
   def validateJson[A : Reads] = parse.json.validate(
     _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
@@ -121,16 +127,27 @@ class UserController @Inject()(
       Future.successful(Unauthorized("not logged in or login age expired"))
   }
 
-  def user(username: String) = deadbolt.Restrict(List(Array(AcctMgr.name)))() { authRequest ⇒
-    userDao.findUserByUsername(username).map (userOpt ⇒
-      if (userOpt.isDefined) Ok(Json.toJson(userOpt.get))
-      else NotFound(s"username ${username} not found")
-    )
-  }
-
-  def restrictOne = deadbolt.Restrict(List(Array(AcctMgr.name)))() { authRequest =>
-    Future {
-      Ok(accessOk())
+  def user(username: String) = deadbolt.Restrict(List(Array(AcctMgr.name)))()(
+    validateLoginTimestamp { authRequest ⇒
+      userDao.findUserByUsername(username).map(userOpt ⇒
+        if (userOpt.isDefined) Ok(Json.toJson(userOpt.get))
+        else NotFound(s"username ${username} not found")
+      )
     }
+  )
+
+  def restrictOne = deadbolt.Restrict(List(Array(AcctMgr.name)))()(
+    validateLoginTimestamp { authRequest =>
+      Future {
+        Ok(accessOk())
+      }
+    }
+  )
+
+  def validateLoginTimestamp(block: Request[Any] ⇒ Future[Result]): Request[Any] ⇒ Future[Result] = { request ⇒
+    if (sessionUtil.validateLoginTimestamp(request.session))
+      block(request)
+    else
+      Future.successful(Unauthorized("logged-in too long ago, relogin"))
   }
 }

@@ -26,15 +26,13 @@ case class User(
 
   override def identifier: String = username
   override def roles: List[UserRoleValue] = userRoles
-  override def permissions: List[UserPermission] = List(UserPermission("user.edit"))
-
-
+  override def permissions: List[UserPermission] = userPermissions
 }
 
 object User {
-  import UserPermission._
-  import UserRole._
   import play.api.libs.json._
+
+  implicit val userRoleValueWrites = UserRole.UserRoleValueWrites
 
   implicit object UserWrites extends OWrites[User] {
     override def writes(u: User): JsObject = Json.obj(
