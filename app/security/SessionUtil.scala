@@ -16,6 +16,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class SessionUtil @Inject() (implicit ec: ExecutionContext, config: Configuration, userDao: UserDao) {
 
+  val log = play.api.Logger(getClass)
+
   implicit val configLoader: ConfigLoader[Duration] = ConfigLoader.durationLoader
 
   val maxLoginAge = config.get[Duration]("user.login.maxAge")
@@ -36,6 +38,8 @@ class SessionUtil @Inject() (implicit ec: ExecutionContext, config: Configuratio
   }
 
   def validateLoginTimestamp(session: Session): Boolean = {
+    log.debug(s"session login timestamp: ${session.get(SessionKeys.LOGIN_TIMESTAMP)}")
+
     session.get(SessionKeys.LOGIN_TIMESTAMP)
       .map(ts ⇒
         Instant.ofEpochMilli(ts.toLong))

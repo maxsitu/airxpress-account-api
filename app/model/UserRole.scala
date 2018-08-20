@@ -18,11 +18,9 @@ object UserRole extends Enumeration {
     case None         ⇒ Left(())
   }
 
-  implicit object UserRoleValueWrites extends Writes[UserRoleValue] {
-    override def writes(o: UserRoleValue): JsValue = JsString(o.name)
-  }
+  val userRoleValueWrites = Json.writes[UserRoleValue]
 
-  implicit object UserRoleValueReads extends Reads[UserRoleValue] {
+  object UserRoleValueReads extends Reads[UserRoleValue] {
     override def reads(json: JsValue): JsResult[UserRoleValue] = json match {
       case JsString(str: String) ⇒ UserRole.parse(str) match {
         case Right(value: UserRoleValue) ⇒ JsSuccess(value)
@@ -34,5 +32,7 @@ object UserRole extends Enumeration {
       case  _ => JsError("String value expected")
     }
   }
+
+  val userRoleValueReads = Json.reads[UserRoleValue]
 }
 

@@ -64,3 +64,5 @@ stage := (stage dependsOn `ui-prod-build`).value
 
 // Execute frontend test task prior to play test execution.
 test := ((test in Test) dependsOn `ui-test`).value
+
+

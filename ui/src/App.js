@@ -5,6 +5,7 @@ import playLogo from './images/play.svg';
 import scalaLogo from './images/scala.png';
 
 import IndexPage from './page/IndexPage';
+import TablePage from './page/TablePage';
 
 import 'antd/dist/antd.css';
 import './App.scss';
@@ -101,6 +102,8 @@ class App extends Component {
               </Breadcrumb>
               <div>
                 <Route path="/:tech" component={IndexPage}/>
+                <Route path="/scala" component={TablePage}/>
+
               </div>
             </Content>
             <Footer style={{textAlign: 'center'}}>

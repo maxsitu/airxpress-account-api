@@ -50,7 +50,9 @@ object FrontendRunHook {
         * Cleanup frontend execution processes.
         */
       override def afterStopped(): Unit = {
-        process.foreach(_.destroy())
+        Process("pkill -SIGINT -x node").run.exitValue()
+
+//        process.foreach(_.destroy)
         process = None
       }
 
