@@ -23,7 +23,7 @@ class SessionUtil @Inject() (implicit ec: ExecutionContext, config: Configuratio
   val maxLoginAge = config.get[Duration]("user.login.maxAge")
 
   def extractUser(session: Session): Future[Either[String, User]] = {
-
+    log.debug(session.data.mkString(","))
     val result = session.get(SessionKeys.USERNAME) match {
       case None ⇒ Future.successful(Left("username not found in session"))
       case Some(username) ⇒

@@ -19,8 +19,8 @@ PUT     /userRoles/:username        controllers.UserController.putUserRoles(user
 + nocsrf
 PATCH   /userRoles/:username        controllers.UserController.patchUserRules(username: String)
 
-GET     /userInfo                   controllers.UserController.userInfo
-GET     /userInfo/:username         controllers.UserController.user(username: String)
+GET     /userInfo                   controllers.UserController.selfUserInfo
+GET     /userInfo/:username         controllers.UserController.userInfo(username: String)
 GET     /restrictOne                controllers.UserController.restrictOne
 
 

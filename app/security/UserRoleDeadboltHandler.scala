@@ -10,11 +10,11 @@ import play.api.Logger
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class UserRoleDeadboltHandler @Inject() (
-                                          implicit  ec: ExecutionContext,
-                                          userDao: UserDao,
-                                          sessionUtil: SessionUtil
-                                        ) extends DeadboltHandler {
+class UserRoleDeadboltHandler @Inject()(
+  implicit ec: ExecutionContext,
+  userDao: UserDao,
+  sessionUtil: SessionUtil
+) extends DeadboltHandler {
 
   val log = Logger(classOf[UserRoleDeadboltHandler])
 
@@ -32,8 +32,10 @@ class UserRoleDeadboltHandler @Inject() (
   }
 
   override def onAuthFailure[A](request: AuthenticatedRequest[A]): Future[Result] = {
-    Future { Results.Forbidden("access denied")}
+    Future {
+      Results.Forbidden("access denied")
+    }
   }
 
-  override def getDynamicResourceHandler[A](request: Request[A]): Future[Option[DynamicResourceHandler]] = ???
+  override def getDynamicResourceHandler[A](request: Request[A]): Future[Option[DynamicResourceHandler]] = Future {None}
 }
