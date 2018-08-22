@@ -141,29 +141,40 @@ class UserController @Inject()(
                             Array(Admin.name))
                      )(parse.json[List[String]]) { request ⇒
 
-      val roleStrs = request.body
-      if (roleStrs.isEmpty)
-        Future.successful(BadRequest("role list is empty"))
-      else {
-        val badRole = roleStrs.find(role ⇒ UserRole.parse(role).isLeft)
-        if (badRole.isDefined)
-          Future.successful(BadRequest(s"bad role: ${badRole.get}"))
-        else {
-          val roles = roleStrs.map(p ⇒ UserRoleValue(p))
+      val roles = request.body.map(p ⇒ UserRoleValue(p))
 
-          userDao.findUserByUsername(username)
-            .flatMap {
-              case Some(user) ⇒
-                val neoU = user.copy(userRoles = roles)
-                userDao.updateUser(neoU).map(num ⇒ Ok(s"$num user affected"))
+      def updateUser(currUser: User): Future[Result] = {
+        val neoU = currUser.copy(userRoles = roles)
+        userDao.updateUser(neoU).map(num ⇒ Ok(s"$num user affected"))
+      }
 
-              case None ⇒ Future.successful(BadRequest("User not exists"))
-            }
-        }
+      (
+        for {
+          opUserEither <- sessionUtil.extractUser(request.session)
+          currUserOpt <- userDao.findUserByUsername(username)
+        } yield (opUserEither, currUserOpt)).flatMap {
+
+        case (Right(opUser), Some(currUser)) if currUser.roles.intersect(Array(AcctMgr, Admin)).isEmpty =>
+          updateUser(currUser)
+
+        case (Right(opUser), Some(currUser)) if opUser.roles.contains(Admin) && ! currUser.roles.contains(Admin) =>
+          log.debug(s"opUser roles: ${opUser.roles.mkString(",")}")
+          updateUser(currUser)
+
+        case (Right(opUser), Some(currUser)) =>
+          log.debug(s"opUser roles: ${opUser.roles.mkString(",")}")
+          log.debug(s"currUser roles: ${currUser.roles.mkString(",")}")
+          Future.successful(Unauthorized(s"Unable to modify user $username, lack of permission"))
+
+        case (_, None) =>
+          Future.successful(BadRequest("User not exists"))
+
+        case _ =>
+          Future.successful(Unauthorized(s"Unable to modify user $username, lack of permission"))
       }
     }
 
-  def patchUserRules(username: String) =
+  def patchUserRoles(username: String) =
     deadbolt.Restrict(List(
                             Array(AcctMgr.name),
                             Array(Admin.name))
@@ -177,9 +188,12 @@ class UserController @Inject()(
 
         userDao.findUserByUsername(username)
           .flatMap {
-            case Some(user) ⇒
+            case Some(user) if user.roles.intersect(Array(AcctMgr, Admin)).isEmpty ⇒
               val neoU = user.copy(userRoles = user.roles.union(roles))
               userDao.updateUser(neoU).map(num ⇒ Ok(s"$num user affected"))
+
+            case Some(user) =>
+              Future.successful(Unauthorized(s"Cannot change role of ${Admin.name} or ${AcctMgr.name}"))
 
             case None ⇒ Future.successful(BadRequest("User not exists"))
           }
@@ -195,10 +209,14 @@ class UserController @Inject()(
 
       val result: Future[Result] = userDao.findUserByUsername(username)
         .flatMap {
-          case Some(user) ⇒ {
+          case Some(user) if user.roles.intersect(Array(AcctMgr, Admin)).isEmpty ⇒ {
             val neoU = user.copy(userPermissions = permissions)
             userDao.updateUser(neoU).map(num ⇒ Ok(s"$num user affected"))
           }
+
+          case Some(user) =>
+            Future.successful(Unauthorized(s"Cannot change permissions of ${Admin.name} or ${AcctMgr.name}"))
+
           case None ⇒ Future.successful(BadRequest("User not exists"))
         }
 
@@ -210,27 +228,39 @@ class UserController @Inject()(
                             Array(AcctMgr.name),
                             Array(Admin.name))
                      )(parse.json[List[String]]) { request ⇒
-      val permissions = request.body.map(p ⇒ UserPermission(p))
+      val patchingPerms = request.body.map(p ⇒ UserPermission(p))
 
-      val result: Future[Result] = userDao.findUserByUsername(username)
-        .flatMap {
-          case Some(user) if (!user.roles.contains(AcctMgr)) ⇒ {
-            val neoU = user.copy(userPermissions = user.userPermissions.union(permissions))
-            userDao.updateUser(neoU).map(num ⇒ Ok(s"$num user affected"))
-          }
-          case Some(user) =>
-            Future.successful(Unauthorized(s"Unable to change permission on ${user.username} as it's ${AcctMgr.name}"))
-          case None ⇒ Future.successful(BadRequest("User not exists"))
-        }
+      def updateUser(currUser: User): Future[Result] = {
+        val neoU = currUser.copy(userPermissions = currUser.userPermissions.union(patchingPerms))
+        userDao.updateUser(neoU).map(num ⇒ Ok(s"$num user affected"))
+      }
 
-      result
+      (
+        for {
+          opUserEither <- sessionUtil.extractUser(request.session)
+          currUserOpt <- userDao.findUserByUsername(username)
+        } yield (opUserEither, currUserOpt)).flatMap {
+
+        case (Right(opUser), Some(currUser)) if currUser.roles.intersect(Array(AcctMgr, Admin)).isEmpty =>
+          updateUser(currUser)
+
+        case (Right(opUser), Some(currUser)) if opUser.roles.contains(Admin) && !currUser.roles.contains(Admin) =>
+          updateUser(currUser)
+        case (_, None) =>
+          Future.successful(BadRequest("User not exists"))
+
+        case _ =>
+          Future.successful(Unauthorized(s"Unable to modify $username, lack of permission"))
+      }
+
     }
 
   def restrictOne =
-    deadbolt.Restrict(List(Array(AcctMgr.name)))()(validateLoginTimestamp { authRequest =>
-      Future {
-        Ok(accessOk())
-      }
+    deadbolt.Restrict(List(Array(AcctMgr.name)))()(validateLoginTimestamp {
+      authRequest =>
+        Future {
+          Ok(accessOk())
+        }
     }
                                                   )
 
@@ -238,10 +268,11 @@ class UserController @Inject()(
   private def validateJson[A: Reads] =
     parse.json.validate(_.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e))))
 
-  private def validateLoginTimestamp(block: Request[Any] ⇒ Future[Result]): Request[Any] ⇒ Future[Result] = { request ⇒
-    if (sessionUtil.validateLoginTimestamp(request.session))
-      block(request)
-    else
-      Future.successful(Unauthorized("logged-in too long ago, relogin"))
+  private def validateLoginTimestamp(block: Request[Any] ⇒ Future[Result]): Request[Any] ⇒ Future[Result] = {
+    request ⇒
+      if (sessionUtil.validateLoginTimestamp(request.session))
+        block(request)
+      else
+        Future.successful(Unauthorized("logged-in too long ago, relogin"))
   }
 }
