@@ -1,38 +1,42 @@
 package model
 
+import be.objectify.deadbolt.scala.models.{Role ⇒ DeadboltRole}
 
+sealed abstract case class UserRole(val name: String) extends DeadboltRole
 
-object UserRole extends Enumeration {
-  import be.objectify.deadbolt.scala.models.Role
+object NormalUser  extends UserRole(name = "Normal")
+object AdminUser   extends UserRole(name = "Admin")
+object AcctMgrUser extends UserRole(name = "AcctMgr")
+object VoidUser    extends UserRole(name = "Void")
+
+object UserRole {
   import play.api.libs.json._
 
-  case class UserRoleValue(name: String) extends Val(name) with Role
-
-  val Void    = UserRoleValue("Void")
-  val Normal  = UserRoleValue("Normal")
-  val Admin   = UserRoleValue("Admin")
-  val AcctMgr = UserRoleValue("AcctMgr")
-
-  def parse(s: String): Either[Unit, UserRoleValue] = UserRole.values.find(_.asInstanceOf[UserRoleValue].name == s) match {
-    case Some(value)  ⇒ Right(value.asInstanceOf[UserRoleValue])
-    case None         ⇒ Left(())
+  def parse(s: String): Option[UserRole] = {
+    List(NormalUser, AdminUser, AcctMgrUser, VoidUser).find(_.name == s)
   }
 
-  val userRoleValueWrites = Json.writes[UserRoleValue]
+  implicit def userRoleName(userRole: UserRole): String = userRole.name
 
-  object UserRoleValueReads extends Reads[UserRoleValue] {
-    override def reads(json: JsValue): JsResult[UserRoleValue] = json match {
-      case JsString(str: String) ⇒ UserRole.parse(str) match {
-        case Right(value: UserRoleValue) ⇒ JsSuccess(value)
-        case Left(()) ⇒
-          JsError(
-            s"Enumeration expected of type: '${UserRole.getClass}', but it does not appear to contain the value: '$str'"
-          )
-      }
-      case  _ => JsError("String value expected")
+  implicit val userRoleWrites = new Writes[UserRole] {
+    override def writes(
+        o: UserRole
+    ): JsValue = JsString(o.name)
+  }
+
+  implicit val userRoleReads = new Reads[UserRole] {
+    override def reads(
+        json: JsValue
+    ): JsResult[UserRole] = json match {
+      case JsString(str: String) ⇒
+        parse(str) match {
+          case Some(value: UserRole) ⇒ JsSuccess(value)
+          case None ⇒
+            JsError(
+              s"expected of type: '${UserRole.getClass}', but it does not appear to contain the value: '$str'"
+            )
+        }
+      case _ ⇒ JsError("")
     }
   }
-
-  val userRoleValueReads = Json.reads[UserRoleValue]
 }
-
