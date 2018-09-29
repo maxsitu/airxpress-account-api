@@ -14,6 +14,7 @@ class ErrorHandler @Inject() (
   sourceMapper: OptionalSourceMapper,
   router: Provider[Router]
 ) extends DefaultHttpErrorHandler(env, config, sourceMapper, router) {
+  import play.api.mvc.Result
 
   override def onProdServerError(request: RequestHeader, exception: UsefulException) = {
     Future.successful(
@@ -31,5 +32,9 @@ class ErrorHandler @Inject() (
     Future.successful(
       BadRequest(s"$message")
     )
+  }
+
+  override def onNotFound(request: RequestHeader, message: String): Future[Result] = {
+    Future.successful(NotFound(s"method: ${request.method}, uri: ${request.uri}"))
   }
 }

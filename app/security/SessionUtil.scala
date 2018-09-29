@@ -6,7 +6,7 @@ import java.time.temporal.ChronoUnit
 import constant.SessionKeys
 import dao.UserDao
 import javax.inject.{Inject, Singleton}
-import model.User
+import model.RichUser
 import play.api.mvc.Session
 import play.api.{ConfigLoader, Configuration}
 
@@ -14,7 +14,9 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class SessionUtil @Inject() (implicit ec: ExecutionContext, config: Configuration, userDao: UserDao) {
+class SessionUtil @Inject()(implicit ec: ExecutionContext,
+                            config: Configuration,
+                            userDao: UserDao) {
 
   val log = play.api.Logger(getClass)
 
@@ -22,16 +24,17 @@ class SessionUtil @Inject() (implicit ec: ExecutionContext, config: Configuratio
 
   val maxLoginAge = config.get[Duration]("user.login.maxAge")
 
-  def extractUser(session: Session): Future[Either[String, User]] = {
+  def extractUser(session: Session): Future[Either[String, RichUser]] = {
     log.debug(session.data.mkString(","))
     val result = session.get(SessionKeys.USERNAME) match {
       case None ⇒ Future.successful(Left("username not found in session"))
       case Some(username) ⇒
-        userDao.findUserByUsername(username)
-          .map(userOpt ⇒
-            if (userOpt.isDefined) Right(userOpt.get)
-            else Left(s"username ${username} not found in system")
-          )
+        userDao
+          .findRichUserByUsername(username)
+          .map {
+            case Some(user) ⇒ Right(user)
+            case None ⇒ Left(s"username ${username} not found in system")
+          }
     }
 
     result
@@ -40,12 +43,13 @@ class SessionUtil @Inject() (implicit ec: ExecutionContext, config: Configuratio
   def validateLoginTimestamp(session: Session): Boolean = {
     log.debug(s"session login timestamp: ${session.get(SessionKeys.LOGIN_TIMESTAMP)}")
 
-    session.get(SessionKeys.LOGIN_TIMESTAMP)
-      .map(ts ⇒
-        Instant.ofEpochMilli(ts.toLong))
+    session
+      .get(SessionKeys.LOGIN_TIMESTAMP)
+      .map(ts ⇒ Instant.ofEpochMilli(ts.toLong))
       .exists(
         _.isAfter(
-          Instant.now()
+          Instant
+            .now()
             .minus(maxLoginAge.toMinutes, ChronoUnit.MINUTES)
         )
       )

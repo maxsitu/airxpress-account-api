@@ -11,9 +11,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class UserRoleDeadboltHandler @Inject()(
-  implicit ec: ExecutionContext,
-  userDao: UserDao,
-  sessionUtil: SessionUtil
+    implicit ec: ExecutionContext,
+    sessionUtil: SessionUtil,
+    userDao: UserDao
 ) extends DeadboltHandler {
 
   val log = Logger(classOf[UserRoleDeadboltHandler])
@@ -37,5 +37,11 @@ class UserRoleDeadboltHandler @Inject()(
     }
   }
 
-  override def getDynamicResourceHandler[A](request: Request[A]): Future[Option[DynamicResourceHandler]] = Future {None}
+  override def getPermissionsForRole(roleName: String): Future[List[String]] = for {
+    userRoleOpt <- userDao.findUserRole(roleName)
+    permissions ← userRoleOpt.fold(Future.successful(List.empty[String]))(result ⇒ Future.successful(result.permissions.toList))
+  } yield (permissions)
+
+  override def getDynamicResourceHandler[A](
+      request: Request[A]): Future[Option[DynamicResourceHandler]] = Future { None }
 }

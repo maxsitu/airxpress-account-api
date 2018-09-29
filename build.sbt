@@ -1,42 +1,38 @@
-name := """play-account-service"""
+name := """airxpress-accout-api"""
 organization := "com.maxsitu"
 
 version := "1.0-SNAPSHOT"
 
 lazy val V = new {
-  val cats       = "1.2.0"
-  val refined    = "0.9.0"
-  val algebra    = "1.0.0"
-  val atto       = "0.6.2"
-  val kittens    = "1.1.0"
-  val scalacheck = "1.13.5"
+  val scalabcrypt        = "3.1"
+  val scalacheck         = "1.13.5"
+  val swaggerui          = "2.2.0"
+  val reactivemongo      = "0.16.0"
+  val deadboltscala      = "2.6.0"
+  val scalatestplus_play = "3.1.2"
 }
 
-lazy val root = (project in file("."))
-  .enablePlugins(PlayScala)
-  .settings(
-    routesGenerator := InjectedRoutesGenerator,
-    watchSources ++= (baseDirectory.value / "ui" ** "*").get,
-    resolvers += Resolver.url("typesafe", url("http://repo.typesafe.com/typesafe/ivy-releases/"))(
-      Resolver.ivyStylePatterns),
-  )
+lazy val root = (project in file(".")).enablePlugins(PlayScala, SwaggerPlugin)
+
+swaggerDomainNameSpaces := Seq("model")
+routesGenerator := InjectedRoutesGenerator
+
+resolvers += Resolver.typesafeRepo("releases")
+resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
   guice,
   ws,
   ehcache,
-  "org.scalatestplus.play" %% "scalatestplus-play"      % "3.1.2" % Test,
-  "org.reactivemongo"      %% "reactivemongo"           % "0.13.0",
-  "com.github.t3hnar"      %% "scala-bcrypt"            % "3.1",
-  "be.objectify"           %% "deadbolt-scala"          % "2.6.0",
-  "com.lightbend.akka"     %% "akka-stream-alpakka-jms" % "0.19",
-  "org.apache.activemq"    % "activemq-client"          % "5.14.1",
-  "org.typelevel"          %% "cats-core"               % V.cats,
-  "org.typelevel"          %% "cats-free"               % V.cats,
-  "javax.jms"              % "jms"                      % "1.1" % Provided
+  "org.webjars"            % "swagger-ui"            % "3.19.0",
+  "io.swagger"             %% "swagger-scala-module" % "1.0.5-SNAPSHOT",
+  "org.reactivemongo"      %% "reactivemongo"        % V.reactivemongo,
+  "com.github.t3hnar"      %% "scala-bcrypt"         % V.scalabcrypt,
+  "be.objectify"           %% "deadbolt-scala"       % V.deadboltscala,
+  "org.scalatestplus.play" %% "scalatestplus-play"   % V.scalatestplus_play % Test,
 )
 
-resolvers += Resolver.typesafeRepo("releases")
+swaggerV3 := true
 
-scalaVersion in compile := "2.12.4"
+scalaVersion in compile := "2.12.6"
 scalacOptions in compile += "-Ypartial-unification"

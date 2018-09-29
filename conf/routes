@@ -4,30 +4,105 @@
 # ~~~~
 
 # An example controller showing a sample home page
+### NoDocs ###
 GET     /api/summary                controllers.FrontendController.appSummary
 
-+ nocsrf
-POST    /user                       controllers.UserController.createUser
-+ nocsrf
-POST    /login                      controllers.UserController.validateUser
-+ nocsrf
-PUT     /userPermissions/:username  controllers.UserController.putUserPermissions(username: String)
-+ nocsrf
-PATCH   /userPermissions/:username  controllers.UserController.patchUserPermissions(username: String)
-+ nocsrf
-PUT     /userRoles/:username        controllers.UserController.putUserRoles(username: String)
-+ nocsrf
-PATCH   /userRoles/:username        controllers.UserController.patchUserRoles(username: String)
+###
+#  summary: Post a register user
+#  responses:
+#    200:
+#      schema:
+#        $ref: '#/components/schemas/model.RegisterUser'
+###
++nocsrf
+POST    /user                       controllers.UserController.postRegisterUser
 
-GET     /userInfo                   controllers.UserController.selfUserInfo
-GET     /userInfo/:username         controllers.UserController.userInfo(username: String)
-GET     /restrictOne                controllers.UserController.restrictOne
++nocsrf
+###
+#  summary: Post a login user
+#  requestBody:
+#    content:
+#      application/json:
+#        schema:
+#          $ref: '#/components/schemas/model.LoginUser'
+#  responses:
+#    Ok:
+#      content:
+#        application/json:
+#          schema:
+#            $ref: '#/components/schemas/model.User'
+#    Unauthorized:
+#      content:
+#        text/plain:
+#          schema:
+#            type: string
+#
+###
+POST    /login                      controllers.UserController.postLoginUser
 
+###
+#  summary: Get the current user info
+#  responses:
+#    Ok:
+#      content:
+#        application/json:
+#          schema:
+#            $ref: '#/components/schemas/model.User'
+###
+GET     /userInfo                   controllers.UserController.getSelfUser
 
+###
+#  summary: Get the all user roles
+#  responses:
+#    Ok:
+#      content:
+#        application/json:
+#          schema:
+#            type: array
+#            items:
+#              $ref: '#/components/schemas/model.UserRole'
+###
+GET     /userRoles                  controllers.UserController.getUserRoles
 
+###
+#  summary: Put a user role
+#  requestBody:
+#    content:
+#      application/json:
+#        schema:
+#          $ref: '#/components/schemas/model.UserRole'
+#  responses:
+#    Ok:
+#      content:
+#        text/plain:
+#          schema:
+#            type: integer
+###
+PUT     /userRole                   controllers.UserController.putUserRole
 
-
+###
+#  summary: Post a user role
+#  parameters:
+#    - name: body
+#      schema:
+#        $ref: '#/components/schemas/model.UserRole'
+#  responses:
+#    Ok:
+#      content:
+#        application/json:
+#          schema:
+#            $ref: '#/components/schemas/model.UserRole'
+###
++nocsrf
+POST    /userRole                   controllers.UserController.postUserRole
 
 # Map static resources from the /public folder to the /assets URL path
+### NoDocs ###
+#+ nocsrf
+#GET     /*file                      controllers.FrontendController.assetOrDefault(file)
+
+### NoDocs ###
+GET     /docs/lib/*file             controllers.Assets.at(path:String="/public/lib/swagger-ui", file:String)
+
+### NoDocs ###
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
-GET     /*file                      controllers.FrontendController.assetOrDefault(file)
