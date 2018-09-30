@@ -33,6 +33,8 @@ libraryDependencies ++= Seq(
 )
 
 swaggerV3 := true
+dockerExposedPorts := Seq(9000)
+(stage in Docker) := (stage in Docker).dependsOn(swagger).value
 
 scalaVersion in compile := "2.12.6"
 scalacOptions in compile += "-Ypartial-unification"

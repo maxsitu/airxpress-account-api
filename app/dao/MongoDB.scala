@@ -1,14 +1,16 @@
 package dao
 
 import javax.inject._
+import play.api.Configuration
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MongoDB @Inject() (implicit ec: ExecutionContext) {
+class MongoDB @Inject() (implicit ec: ExecutionContext, config: Configuration) {
 
-  val mongoUri = "mongodb://localhost:27017/ax_account_db?authMode=scram-sha1"
+  val mongoUri = config.getOptional[String]("mongodb.url")
+    .getOrElse( "mongodb://localhost:27017/ax_account_db?authMode=scram-sha1")
 
   // Connect to the database: Must be done only once per application
   val driver = MongoDriver()

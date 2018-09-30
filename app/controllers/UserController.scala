@@ -14,16 +14,13 @@ import model.UserRole._
 import reactivemongo.core.errors.ReactiveMongoException
 import security.SessionUtil
 import validator.UserRegisterValidator
-import views.html.accessOk
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class UserController @Inject()(implicit ec: ExecutionContext,
-                               cc: ControllerComponents,
                                deadbolt: DeadboltActions,
-                               actionBuilder: ActionBuilders,
                                userDao: UserDao,
                                sessionUtil: SessionUtil)
     extends InjectedController {
